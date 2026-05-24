@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: translink-backend-ioca
+    env: node
+    plan: starter
+
+    # Build: type-check → compile frontend (dist/) → compile server (dist-server/)
+    buildCommand: npm ci --include=dev && npm run build
+
+    # Start: run the compiled server directly — no devDependencies needed at runtime
+    startCommand: node dist-server/index.js
+
+    # Render health check — hits the /api/health endpoint defined in api.ts
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: PORT
+        value: 10000
+        # Render internally routes to this port. Must match what the server listens on.
+
+      - key: GEMINI_API_KEY
+        sync: false
+        # ⚠ REQUIRED — set this secret in the Render dashboard → Environment → Add Secret.
+        # Obtain from https://aistudio.google.com/apikey
+
+      - key: APP_URL
+        # The public URL of THIS Render service (the backend).
+        # Used as one of the allowed WebSocket origins for browser connections
+        # originating from the Render-hosted copy of the frontend.
+        value: https://backend-kzha.onrender.com
+
+      - key: ALLOWED_ORIGINS
+        # Comma-separated allowed origins for CORS and WebSocket origin validation.
+        # Must include every domain from which the frontend is served.
+        # translinket.com = primary cPanel-hosted production frontend.
+        # Add www variant — browsers send it as Origin on www requests.
+        # Include the Render backend URL itself (frontend is served from the same service).
+        value: https://translinket.com,https://www.translinket.com,https://backend-kzha.onrender.com
+
+      - key: VITE_WS_BACKEND_URL
+        # Injected into the frontend bundle at build time by Render.
+        # Allows the compiled JS to know which backend WS to connect to.
+        value: https://backend-kzha.onrender.com
